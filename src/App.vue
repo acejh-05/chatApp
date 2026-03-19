@@ -7,14 +7,6 @@ const route = useRoute();
 const router = useRouter();
 const store = useStore();
 
-const handleLogout = () => {
-  const confirmed = window.confirm("Are you sure you want to sign out?");
-  if (confirmed) {
-    store.signOut();
-    router.push('/');
-  }
-};
-
 </script>
 
 
@@ -27,7 +19,7 @@ const handleLogout = () => {
   <div class="links-right">
     <RouterLink v-if="['/', '/login'].includes(route.path)" id="createLink" to="/create">Create Account</RouterLink>
     <RouterLink v-if="['/', '/create'].includes(route.path)" id="signinLink" to="/login">Sign In</RouterLink>
-    <a v-if="route.path === '/home'" @click.prevent="handleLogout" id="signoutLink">Sign Out</a>
+    <RouterLink v-if="['/home'].includes(route.path)" id="signoutLink" to="/">Sign Out</RouterLink>
   </div>
 </nav>
 
