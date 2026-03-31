@@ -34,7 +34,7 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const store = useStore()
-  const isSignedIn = !!store.currUser
+  const isSignedIn = !!store.currUser.username
   if ((to.path.startsWith('/home') || to.path === '/notFound' ) && !isSignedIn) {
     return next('/login')
   } else if ((to.path === '/login'  || to.path === '/create' || to.path === '/signin' || to.path === '/notFound' ) && isSignedIn) {

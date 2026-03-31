@@ -5,12 +5,15 @@ import { useStore } from '../stores/appStore.js'
 const store = useStore()
 
 onBeforeRouteLeave((to, from) => {
-  const answer = window.confirm(
-    'Are you sure you want to sign out?',
-    store.signOut()
-
-  )
-  if (!answer) return false
+    const answer = window.confirm(
+        'Are you sure you want to sign out?',
+    )
+    if (answer) {
+        store.signOut()
+        return true
+    } else {
+        return false
+    }
 })
 
 

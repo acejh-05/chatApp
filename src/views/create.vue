@@ -8,7 +8,10 @@ const router = useRouter();
 const store = useStore();
 const showPass = ref(false);
 const formData = reactive({
+    firstName: "",
+    lastName: "",
     username: "",
+    email: "",
     password: "",
 })
 
@@ -26,14 +29,41 @@ const passVals = [
   { id: 8, text: 'Must have 1 special character', check: () => /[!@#$%^&*]/.test(formData.password) }
 ]
 
+const firstNameVal = [
+  { id: 9, text: 'Cannot be empty', check: () => formData.firstName.length >= 1 },
+]
+
+const lastNameVal = [
+  { id: 10, text: 'Cannot be empty', check: () => formData.lastName.length >= 1 },
+]
+
+const emailVal = [
+  { id: 11, text: 'Must be a valid email address', check: () => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email) },
+]
+
 const userValsShown = computed(() => userVals.filter(r=>!r.check()))
 const passValsShown = computed(() => passVals.filter(r=>!r.check()))
+const firstValsShown = computed(() => firstNameVal.filter(r=>!r.check()))
+const lastValsShown = computed(() => lastNameVal.filter(r=>!r.check()))
+const emailValsShown = computed(() => emailVal.filter(r=>!r.check()))
 
-const isFormValid = computed(() => userValsShown.value.length === 0 && passValsShown.value.length === 0)
+const isFormValid = computed(() => userValsShown.value.length === 0 && passValsShown.value.length === 0 && firstValsShown.value.length === 0 && lastValsShown.value.length === 0 && emailValsShown.value.length === 0 )
 
 const userExists = ref(false)
 
-const handleCreate = () => {
+const handleCreate = async () => { 
+    if (isFormValid.value) {
+        const success = await store.createAcc({...formData})
+    if (success) {
+        router.push('/login')
+        userExists.value = false;
+    } else {
+        userExists.value = true;
+    }
+  }
+}
+
+/*const handleCreate = () => {
     userExists.value = false
     if (isFormValid.value) {
         const success = store.createAcc(formData.username, formData.password)
@@ -44,7 +74,7 @@ const handleCreate = () => {
         }
         
     }
-}
+}*/
 
 </script>
 
@@ -58,8 +88,16 @@ const handleCreate = () => {
     <div class="createComponent">
         <div class="createForm">
             <h1>Create Account</h1>
-            <h3>Please Choose a Username and Password</h3>
+            <h3>Please Fill Out Your Creditionals</h3>
             <form>
+                <div class="firstField">
+                    <label for="firstName">First Name</label><br>
+                    <input v-model="formData.firstName"><br>
+                </div>
+                <div class="lastField">
+                    <label for="lastName">Last Name</label><br>
+                    <input v-model="formData.lastName"><br>
+                </div>
                 <div class="usernameField">
                     <label for="username">Username</label><br>
                     <input v-model="formData.username"><br>
@@ -74,6 +112,10 @@ const handleCreate = () => {
                     </div>
                     <input :type="showPass ? 'text' : 'password'" v-model="formData.password" /><br>
                 </div>
+                <div class="emailField">
+                    <label for="email">Email Address</label><br>
+                    <input v-model="formData.email"><br>
+                </div>
                 <span v-if="userExists" class="error">*User Already Exists*</span>
                 <RouterLink v-if="userExists" to='/login'>Sign In Instead?</RouterLink>
                 <button @click.prevent="handleCreate" :disabled="!isFormValid">Create Account!</button>
@@ -82,6 +124,20 @@ const handleCreate = () => {
     </div>
 
         <div v-if="!isFormValid" class="createValidation">
+            <div v-if="firstValsShown.length > 0">
+                <span class="titles">First Name</span>
+                <ul>
+                    <li v-for="showing in firstValsShown" :key="showing.id">{{ showing.text }}</li>
+                </ul>
+            </div>
+
+            <div v-if="lastValsShown.length > 0">
+                <span class="titles">Last Name</span>
+                <ul>
+                    <li v-for="showing in lastValsShown" :key="showing.id">{{ showing.text }}</li>
+                </ul>
+            </div>
+
             <div v-if="userValsShown.length > 0">
                 <span class="titles">Username</span>
                 <ul>
@@ -93,6 +149,13 @@ const handleCreate = () => {
             <span class="titles">Password</span>
                 <ul>
                     <li v-for="showing in passValsShown" :key="showing.id">{{ showing.text }}</li>
+                </ul>
+            </div>
+
+            <div v-if="emailValsShown.length > 0">
+                <span class="titles">Email</span>
+                <ul>
+                    <li v-for="showing in emailValsShown" :key="showing.id">{{ showing.text }}</li>
                 </ul>
             </div>
 
@@ -199,6 +262,27 @@ h3 {
 }
 
 .passwordField {
+    box-sizing: border-box;
+    width: 160px;
+    margin-bottom: 5px;
+    justify-self: center;
+}
+
+.firstField {
+    box-sizing: border-box;
+    width: 160px;
+    margin-bottom: 5px;
+    justify-self: center;
+}
+
+.lastField {
+    box-sizing: border-box;
+    width: 160px;
+    margin-bottom: 5px;
+    justify-self: center;
+}
+
+.emailField {
     box-sizing: border-box;
     width: 160px;
     margin-bottom: 5px;

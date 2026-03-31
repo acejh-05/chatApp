@@ -1,10 +1,11 @@
 <script setup>
 
 import { ref, reactive, computed } from 'vue';
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../stores/appStore.js'
 
 const router = useRouter();
+const route = useRoute();
 const store = useStore();
 const showPass = ref(false);
 const formData = reactive({
@@ -18,7 +19,19 @@ const isFormFilled = computed(() => {
 
 const userExists = ref(true)
 
-const handleLogin = () => {
+const handleLogin = async () => {
+    if (isFormFilled.value) {
+        const success = await store.signIn(formData.username, formData.password)
+        if (success) {
+            userExists.value = true;
+            router.push('/home')
+        } else {
+            userExists.value = false;
+        }
+    }
+}
+
+/*const handleLogin = () => {
     userExists.value = true
     if (isFormFilled.value) {
         const success = store.signIn(formData.username, formData.password)
@@ -29,7 +42,7 @@ const handleLogin = () => {
         }
         
     }
-}
+}*/
 
 </script>
 

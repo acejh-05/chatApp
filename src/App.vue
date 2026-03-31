@@ -23,7 +23,7 @@ const store = useStore();
   </div>
 </nav>
 
-<img id="logo" src="../public/brassKitty.PNG" alt="brass cat logo">
+<img id="logo" src="../brassKitty.PNG" alt="brass cat logo">
 
 <main>
   <RouterView />
