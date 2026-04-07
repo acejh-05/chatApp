@@ -1,17 +1,33 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 export const useStore = defineStore('store', () => {
-    const router = useRouter();
 
-    //const storedUsers = localStorage.getItem('db_users')
-    //const storedMsgs = localStorage.getItem('db_messages')
-    //const storedSession = localStorage.getItem('current_session')
+    const router = useRouter()
+
+    const savedUser = localStorage.getItem('user');
 
     const currUser = ref({
-        username: localStorage.getItem('username') || null,
+        _id: null,
+        username: null
     })
+
+    if (savedUser && savedUser !== '[object Object]') {
+        try {
+            const parsed = JSON.parse(savedUser)
+            currUser.value = parsed;
+        } catch (e) {
+            console.error("Storage parse error", e);
+        }
+    }
+
+    const authToken = ref(localStorage.getItem('authToken') || null)
+    const targetUser = ref(null)
+
+    const friends = ref([])
+    const inReqs = ref([])
+    const outReqs = ref([])
 
     const errorState = ref('')
 
@@ -96,129 +112,236 @@ export const useStore = defineStore('store', () => {
 
             if (!response.ok) {
                 if (response.status === 401 || response.status === 400) {
-                    errorState.value = 'Invalid username or password.';
+                    errorState.value = 'Invalid username or password'
                 } else {
-                    errorState.value = 'Server error';
+                    errorState.value = 'Server error'
                 }
-            return false;
+            return false
             }
 
         const result = await response.json()
-        console.log(result)
+        if (response.ok) {
+            currUser.value = result.user
+            authToken.value = result.authToken
 
-        currUser.value = result.user
-        localStorage.setItem('username', result.user.username)
+            localStorage.setItem('user', JSON.stringify(result.user))
+            localStorage.setItem('authToken', result.authToken)
+        }
 
         return true
 
         } catch (error) {
-        console.log(error)
-        return false
+            console.log(error)
+            return false
         }
     }
     
     function signOut() {
         currUser.value = { username: null }
         localStorage.removeItem('username')
+        localStorage.removeItem('authToken')
     }
 
+    const getAuth = () => ({
+        'Content-Type': 'application-json',
+        'Authorization': `Bearer ${authToken.value}`
+    })
 
+    async function findUser(username) {
 
-    //const targetUser = ref(null)
+        errorState.value = ''
 
-    /*const capitalTarget = computed(() => {
-        if (!targetUser.value) return ''
-        const name = targetUser.value
-        return name.charAt(0).toUpperCase() + name.slice(1)
-    })*/
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+        const url = `${host}/users?limit=10&search=${encodeURIComponent(username)}`
+
+        try {
+            const response = await fetch(url, { 
+                headers: getAuth() 
+            })
+            const data = await response.json()
+
+            const userArray = data.users || []
     
-    /*const users = ref( storedUsers ? JSON.parse(storedUsers) : [
-        { user: 'froggy700', pass: 'fliesAndl1ly5!', friends: ['eatinBugs'], outReqs: [], inReqs: [] },
-        { user: 'coolestk9', pass: 'barkWoof&gr0wl', friends: ['prettyKitty'], outReqs: [], inReqs: [] },
-        { user: 'prettyKitty', pass: 'm30wBiscu!ts', friends: ['coolestk9'], outReqs: [], inReqs: [] },
-        { user: 'loudTweeter', pass: 'ch1rpCheep?', friends: [], outReqs: [], inReqs: [] },
-        { user: 'eatinBugs', pass: 'lizzyB0cephu$', friends: ['froggy700'], outReqs: [], inReqs: [] },
-    ])*/
+            const found = userArray.find(u => u.username.toLowerCase() === username.toLowerCase())
 
-    /*const messages = ref( storedMsgs ? JSON.parse(storedMsgs) : [
-        { from: 'froggy700', to: 'eatinBugs', message: 'Those flies you made last night really hit the spot man'},
-        { from: 'eatinBugs', to: 'froggy700', message: 'The secret is using a little bit of worms and a lot of love :)'},
-        { from: 'prettyKitty', to: 'coolestk9', message: 'This morning my owner tried to hide a pill in a bit of tuna. Does she think im stupid?'},
-        { from: 'coolestk9', to: 'prettyKitty', message: 'How dare she! Luckily, my owner doesnt do that. I do get a piece of cheese every morning though.'},
-    ])*/
-
-    /*watch(users, (val) => {
-        localStorage.setItem('db_users', JSON.stringify(val))
-    }, { deep: true } )
-
-    watch(messages, (val) => {
-        localStorage.setItem('db_messages', JSON.stringify(val))
-    }, { deep: true } )
-
-    watch(currUser, (val) => {
-        if (val) localStorage.setItem('current_session', JSON.stringify(val))
-        else localStorage.removeItem('current_session')
-    }, { deep: true } )
-    */
-
-    /*function signIn(username, password) {
-        const user = users.value.find( u => u.user === username && u.pass === password )
-        if (user) { 
-            currUser.value = user
-            return true 
-        }
-        return false;
-    }*/
-
-    /*function createAcc(username, password) {
-        if (users.value.some(u => u.user === username)) return false;
-        users.value.push({
-            user: username,
-            pass: password,
-            friends: [],
-            outReqs: [],
-            inReqs: []
-        })
-        return true
-    }*/
-
-    /*function signOut() {
-        currUser.value = null
-        targetUser.value = null
-    }*/
-
-    /*function sendMsg(to, message) {
-        if (!currUser.value || !message ) return;
-        messages.value.push({
-            from: currUser.value.user,
-            to: to,
-            message: message
-        })
-    }*/
-
-    /*function sendReq(tarName) {
-        const target = users.value.find(u => u.user === tarName)
-        const savedUser = currUser.value
-
-        if (target && savedUser && target.user !== savedUser.user) {
-            if (!target.inReqs.includes(savedUser.user) && !savedUser.friends.includes(target.user)) {
-                target.inReqs.push(savedUser.user)
-                currUser.value.outReqs.push(tarName)
+            if (found) {
+                return found._id
+            } else {
+                errorState.value = 'User not found'
+            return null;
             }
+        } catch (error) {
+            console.error("SEARCH CRASHED:", error)
+            return null
         }
-    }*/
+    }
 
-    /*function acceptReq(reqName) {
-        const request = users.value.find(u => u.user === reqName)
-        const savedUser = currUser.value
+    async function getFriends() {
 
-        if (savedUser && request) {
-            savedUser.friends.push(reqName)
-            request.friends.push(savedUser.user)
-            savedUser.inReqs = savedUser.inReqs.filter(name => name !== reqName)
-            request.outReqs = request.outReqs.filter(name => name !== savedUser.user)
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+
+        try {
+            const response = await fetch(`${host}/user`, {
+                method: 'GET',
+                headers: getAuth(),
+            })
+            const data = await response.json()
+            friends.value = data.friends || []
+        } catch (e) {
+            console.error("Failed to fetch friends", e)
         }
-    }*/
+    }
 
-    return { currUser, capitalUser, errorState, isAuth, signIn, createAcc, signOut }
+    async function sendReq(username) {
+
+        errorState.value = ''
+
+        const nameToSearch = username.trim().toLowerCase()
+
+        if (nameToSearch === currUser.value.username.toLowerCase()) {
+            errorState.value = "You cannot add yourself as a friend"
+            return false
+        }
+
+        const isAlreadyFriend = friends.value.some(f => f.username.toLowerCase() === nameToSearch.toLowerCase())
+
+        if (isAlreadyFriend) {
+            errorState.value = `${nameToSearch} is already your friend`
+            return false
+        }
+
+        const isPendingOut = outReqs.value.some(r => r.receiver?.username?.toLowerCase() === nameToSearch)
+        const isPendingIn = inReqs.value.some(r => r.sender?.username?.toLowerCase() === nameToSearch)
+
+        if (isPendingOut || isPendingIn) {
+            errorState.value = `A friend request with ${nameToSearch} is already pending`
+            return false
+        }
+
+        const userId = await findUser(username)
+
+        if (!userId) {
+            errorState.value = "Could not find that user"
+            return false
+        }
+        
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+        const url = `${host}/friend-request/${userId}`
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: getAuth(),
+            })
+
+            console.log("POST Response Status:", response.status)
+
+            if (response.ok) {
+                await getReq()
+                return true
+            } else {
+                const errorData = await response.json().catch(() => ({}))
+                errorState.value = errorData.message || "Server refused the request"
+                return false
+            }
+        } catch (error) {
+            console.error("Network or Script Error:", error)
+            errorState.value = "Failed to communicate with server"
+            return false
+        }
+    }
+
+    async function handleReq(requestId, acceptStatus) {
+
+        errorState.value = ''
+
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+        const url = `${host}/friend-request/${requestId}?accept=${String(acceptStatus)}`
+
+        try {
+            const response = await fetch(url, {
+            method: 'PATCH',
+            headers: getAuth(),
+        })
+
+        const result = await response.json();
+        console.log("Server Response after Patch:", result)
+
+        if (!response.ok) {
+            throw new Error('Failed to update friend request')
+        }
+
+        this.inReqs = this.inReqs.filter(r => r._id !== requestId)
+        await getReq()
+        await getFriends()
+    
+  } catch (err) {
+    errorState.value = err.message;
+  }
+}
+
+    async function getReq() {
+
+        errorState.value = ''
+
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+        const url = `${host}/friend-requests`
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: getAuth(),
+                cache: 'no-store'
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch requests')
+            }
+
+            const data = await response.json()
+            const requests = Array.isArray(data) ? data : (data.requests || [])
+            const myId = String(currUser.value?._id || currUser.value?.id || "").trim()
+
+            inReqs.value = requests.filter(req => req.receiver?.userId === myId)
+            outReqs.value = requests.filter(req => req.sender?.userId === myId)
+
+        } catch {
+            errorState.value = 'Could not load friend requests'
+            return []
+        }
+    }
+
+    async function removeFriend(userId) {
+
+        errorState.value = ''
+
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+        const url = `${host}/friend/${userId}`
+
+        try {
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: getAuth(),
+            })
+
+            if (response.ok) {
+                await getFriends()
+                await getReq()
+            }
+        } catch (err) {
+            errorState.value = "Failed to remove friend"
+            console.error(err)
+        }
+    }
+
+    watch(() => currUser.value?._id, (newId) => {
+        if (newId) {
+            console.log("User detected, fetching friend requests...");
+            getReq();
+        }
+    }, 
+        { immediate: true }
+    )
+
+    return { currUser, capitalUser, targetUser, friends, inReqs, outReqs, errorState, isAuth, signIn, createAcc, signOut, findUser, getFriends, sendReq, handleReq, getReq, removeFriend }
 })

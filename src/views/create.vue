@@ -26,7 +26,7 @@ const passVals = [
   { id: 5, text: 'Must have 1 uppercase character', check: () => /[A-Z]/.test(formData.password) },
   { id: 6, text: 'Must have 1 lowercase character', check: () => /[a-z]/.test(formData.password) },
   { id: 7, text: 'Must have 1 number', check: () => /[0-9]/.test(formData.password) },
-  { id: 8, text: 'Must have 1 special character', check: () => /[!@#$%^&*]/.test(formData.password) }
+  { id: 8, text: 'Must have 1 special character', check: () => /[!@#$%^&*?]/.test(formData.password) }
 ]
 
 const firstNameVal = [
