@@ -19,6 +19,7 @@ const store = useStore();
   <div class="links-right">
     <RouterLink v-if="['/', '/login'].includes(route.path)" id="createLink" to="/create">Create Account</RouterLink>
     <RouterLink v-if="['/', '/create'].includes(route.path)" id="signinLink" to="/login">Sign In</RouterLink>
+    <button v-if="['/home'].includes(route.path)" id="userInfo" @click="store.getProfile()">View Profile</button>
     <RouterLink v-if="['/home'].includes(route.path)" id="signoutLink" to="/">Sign Out</RouterLink>
   </div>
 </nav>
@@ -109,6 +110,17 @@ footer p {
 #signoutLink {
    display: inline-flex;
    cursor: pointer;
+}
+
+#userInfo {
+    display: inline-block;
+    padding: 10px 15px;
+    border-radius: 999px;
+    color: #000;
+    text-decoration: none;
+    background-color: #d49a36;
+    border: none;
+    font-size: 1em;
 }
 
 a {

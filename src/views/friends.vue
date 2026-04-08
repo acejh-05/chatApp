@@ -21,7 +21,6 @@ const selectFriend = (name) => {
 }
 
 const sendRequest = async () => {
-    console.log("Button clicked! Trying to add:", newFriend.value)
     if (newFriend.value.trim() !== '') {
         const success = await store.sendReq(newFriend.value.trim())
         if (success) {

@@ -31,6 +31,8 @@ export const useStore = defineStore('store', () => {
 
     const errorState = ref('')
 
+    const profileData = ref(null)
+    const showProfile = ref(false)
 
     const capitalUser = computed(() => {
         if (!currUser.value) return ''
@@ -176,6 +178,29 @@ export const useStore = defineStore('store', () => {
         }
     }
 
+    async function getProfile() {
+  
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+        const url = host + '/user'
+
+        try {
+            const response = await fetch(url, {
+            method: 'GET',
+            headers: getAuth(),
+            })
+
+            if (response.ok) {
+                const result = await response.json()
+                profileData.value = result
+                showProfile.value = true
+            } else {
+                errorState.value = 'Could not fetch profile'
+            }
+        } catch (err) {
+            errorState.value = 'Server connection failed'
+        }
+    }   
+
     async function getFriends() {
 
         const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
@@ -302,6 +327,8 @@ export const useStore = defineStore('store', () => {
             const requests = Array.isArray(data) ? data : (data.requests || [])
             const myId = String(currUser.value?._id || currUser.value?.id || "").trim()
 
+            console.log(requests)
+
             inReqs.value = requests.filter(req => req.receiver?.userId === myId)
             outReqs.value = requests.filter(req => req.sender?.userId === myId)
 
@@ -343,5 +370,5 @@ export const useStore = defineStore('store', () => {
         { immediate: true }
     )
 
-    return { currUser, capitalUser, targetUser, friends, inReqs, outReqs, errorState, isAuth, signIn, createAcc, signOut, findUser, getFriends, sendReq, handleReq, getReq, removeFriend }
+    return { currUser, capitalUser, targetUser, friends, inReqs, outReqs, errorState, isAuth, profileData, showProfile, getProfile, signIn, createAcc, signOut, findUser, getFriends, sendReq, handleReq, getReq, removeFriend }
 })
