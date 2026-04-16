@@ -31,19 +31,6 @@ const handleLogin = async () => {
     }
 }
 
-/*const handleLogin = () => {
-    userExists.value = true
-    if (isFormFilled.value) {
-        const success = store.signIn(formData.username, formData.password)
-        if (success) {
-            router.push('/home')
-        } else {
-            userExists.value = false
-        }
-        
-    }
-}*/
-
 </script>
 
 
@@ -52,6 +39,8 @@ const handleLogin = async () => {
     <div class="loginView">
 
     <div class="main">
+
+    <p v-if="store.successMsg" class="success-msg"  >{{ store.successMsg }}</p>
 
     <div class="loginComponent">
         <div class="loginForm">
@@ -105,6 +94,7 @@ a {
 .main {
     overflow: auto;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     transition: all 0.8s ease;
@@ -256,6 +246,10 @@ input:checked + .slider:before {
 .error {
     color: #590300;
     justify-self: center;
+}
+
+.success-msg {
+    color: #475921;
 }
 
 </style>

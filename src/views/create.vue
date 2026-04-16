@@ -63,19 +63,6 @@ const handleCreate = async () => {
   }
 }
 
-/*const handleCreate = () => {
-    userExists.value = false
-    if (isFormValid.value) {
-        const success = store.createAcc(formData.username, formData.password)
-        if (success) {
-            router.push('/login')
-        } else {
-            userExists.value = true
-        }
-        
-    }
-}*/
-
 </script>
 
 

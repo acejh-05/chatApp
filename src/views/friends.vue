@@ -1,6 +1,6 @@
 <script setup>
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 
 import { useStore } from '../stores/appStore';
 const store = useStore();
@@ -14,6 +14,7 @@ onMounted(() => {
         store.getReq()
         store.getFriends()
     }, 30000)
+    store.getChats()
 })
 
 const selectFriend = (name) => {
@@ -37,6 +38,49 @@ const handleRemove = async (userId) => {
     }
 }
 
+const chatData = reactive({
+    group_name: '',
+    chat_type: "group",
+})
+
+const groupNameVal = [
+  { id: 12, text: 'Cannot be empty', check: () => chatData.group_name.length >= 1 },
+]
+
+const nameValsShown = computed(() => groupNameVal.filter(r=>!r.check()))
+
+const isFormValid = computed(() => nameValsShown.value.length === 0 )
+
+const chatExists = ref(false)
+
+const handleCreate = async () => { 
+    const data = {
+      group_name: chatData.group_name,
+      chat_type: chatData.chat_type,
+    }
+    if (isFormValid.value) {
+        const success = await store.createChat(data)
+    if (success) {
+        chatExists.value = false;
+    } else {
+        chatExists.value = true;
+    }
+  }
+}
+
+const handleSelect = (chat) => {
+    store.selectChat(chat)
+}
+
+const handleLeave = async (chat) => {
+    if (confirm("Are you sure you want to leave this chat?")) {
+        await store.leaveChat(chat._id)
+        await store.getChats()
+    }
+}
+
+
+
 </script>
 
 <template>
@@ -48,30 +92,50 @@ const handleRemove = async (userId) => {
     <h2>Friends</h2>
     <div v-if="store.friends.length > 0">
         <li v-for="friend in store.friends" :key="friend._id" class="listItem">
-            <span @click="selectFriend(friend.username)" class="clickable">{{ friend.username }}</span>
+            <span @click="selectFriend(friend.username)">{{ friend.username }}</span>
             <button @click.stop="handleRemove(friend.userId)" class="remove">Remove Friend</button>
         </li>
     </div>
     <span v-else>No friends yet.</span>
 
-    <div class="addFriend">
-        <input id="addFriend" v-model="newFriend" placeholder="Enter your friend's username" @keyup.enter="sendRequest"/>
+    <div>
+        <input class="search" v-model="newFriend" placeholder="search a username" @keyup.enter="sendRequest"/>
         <button @click="sendRequest" class="add">Add Friend</button>
-        <p v-if="store.errorState" class="error-msg"  >{{ store.errorState }}</p>
     </div>
 
     <div v-if="store.inReqs.length > 0">
     <h2>Incoming Friend Requests</h2>
-        <li v-for="req in store.inReqs" :key="req.id">{{ req.sender?.username }}
+        <li class="listItem" v-for="req in store.inReqs" :key="req.id">{{ req.sender?.username }}
             <button @click="store.handleReq(req._id, true)" class="accept">Accept</button>
             <button @click="store.handleReq(req._id, false)" class="deny">Deny</button>
         </li>
     </div>
 
-    <div v-if="store.outReqs.length > 0">
-    <h2>Outgoing Friend Requests</h2>
-        <li v-for="req in store.outReqs" :key="req.id">{{ req.receiver?.username }} (Pending)</li>
+    <div class="myChats">
+        <h2>Your Chats</h2>
+            <ul v-if="store.userChats && store.userChats.length > 0">
+                <li v-for="chat in store.userChats" :key="chat._id" class="listItemChat">
+                    <span id="name" @click.prevent="handleSelect(chat)">{{ chat.group_name }}</span>
+                    <button v-if="store.currUser._id !== chat.owner?.user_id" @click="handleLeave(chat)" class="remove">Leave Chat</button>
+                </li>
+            </ul>
+        <p v-else>You haven't joined any chats yet</p>
+        <input class="search" placeholder='new chat name' v-model="chatData.group_name" @keyup.enter="sendRequest">
+        <button class="add" @click.prevent="handleCreate" :disabled="!isFormValid">Create Group Chat</button>
+
+        <div v-if="store.chatInvites.length > 0" class="invites">
+            <h2>Incoming Group Invites</h2>
+                <ul>
+                <li class="listItemChat" v-for="invite in store.chatInvites" :key="invite._id"> 
+                    {{ invite.chat.name }}
+                    <button class="accept" @click="store.handleInvite(invite.chat.chatId, invite._id, true)">Accept</button>
+                    <button class="deny" @click="store.handleInvite(invite.chat.chatId, invite._id, false)">Decline</button>
+                </li>
+                </ul>
+        </div>
+
     </div>
+
 </div>
 
 </div>
@@ -112,10 +176,10 @@ li {
     margin-left: 10px;
 }
 
-#addFriend {
+.search {
     border-radius: 20px;
     padding: 5px;
-    width: 50%;
+    width: 45%;
     margin-top: 20px;
 }
 
@@ -139,8 +203,30 @@ li {
 }
 
 .listItem {
-    margin-top: 10px;
-    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between; 
+    align-items: center;           
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    width: 80%;
+    margin-left: -10px;
+}
+
+.listItemChat {
+    display: flex;
+    justify-content: space-between; 
+    align-items: center;           
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    margin-left: -40px;
+    width: 80%;
+}
+
+.listItem span, .listItem button#name, .listItem li {
+  margin-left: 10px;
+  text-align: left;
 }
 
 .clickable {
@@ -153,11 +239,31 @@ li {
     margin-right: 20px;
 }
 
+#name {
+    background: none;
+    border: none;
+}
+
 .remove {
     border: none;
     background-color: lightgray;
     border-radius: 20px;
     padding: 8px 12px;
+    margin-left: 10px;
+}
+
+.add {
+    color: black;
+    background-color: #d48f17;
+    border-radius: 999px;
+    padding: 10px 15px;
+    border: 0;
+    margin-top: 15px;
+    width: 45%;
+}
+
+button:active {
+    transform: scale(0.97);
 }
 
 </style>

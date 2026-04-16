@@ -30,9 +30,15 @@ export const useStore = defineStore('store', () => {
     const outReqs = ref([])
 
     const errorState = ref('')
+    const successMsg = ref('')
 
     const profileData = ref(null)
     const showProfile = ref(false)
+
+    const userChats = ref([])
+    const currChat = ref(null)
+    const currMsgs = ref([])
+    const chatInvites = ref([])
 
     const capitalUser = computed(() => {
         if (!currUser.value) return ''
@@ -47,6 +53,7 @@ export const useStore = defineStore('store', () => {
     async function createAcc(user) {
 
         errorState.value = ''
+        successMsg.value = ''
         
         const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
         const url = host + '/user'
@@ -83,6 +90,8 @@ export const useStore = defineStore('store', () => {
                 return false
             }
 
+        successMsg.value = "Account Created Successfully!"
+        setTimeout(() => { successMsg.value = '' }, 5000)
         return true
 
         } catch (error) {
@@ -94,6 +103,7 @@ export const useStore = defineStore('store', () => {
     async function signIn(username, password) {
 
         errorState.value = ''
+        successMsg.value = ''
 
         const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
         const url = host + '/user/login'
@@ -140,18 +150,20 @@ export const useStore = defineStore('store', () => {
     
     function signOut() {
         currUser.value = { username: null }
+        currChat.value = null
         localStorage.removeItem('username')
         localStorage.removeItem('authToken')
     }
 
     const getAuth = () => ({
-        'Content-Type': 'application-json',
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken.value}`
     })
 
     async function findUser(username) {
 
         errorState.value = ''
+        successMsg.value = ''
 
         const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
         const url = `${host}/users?limit=10&search=${encodeURIComponent(username)}`
@@ -220,6 +232,7 @@ export const useStore = defineStore('store', () => {
     async function sendReq(username) {
 
         errorState.value = ''
+        successMsg.value = ''
 
         const nameToSearch = username.trim().toLowerCase()
 
@@ -263,6 +276,7 @@ export const useStore = defineStore('store', () => {
 
             if (response.ok) {
                 await getReq()
+                alert("Friend Request Sent!")
                 return true
             } else {
                 const errorData = await response.json().catch(() => ({}))
@@ -279,6 +293,7 @@ export const useStore = defineStore('store', () => {
     async function handleReq(requestId, acceptStatus) {
 
         errorState.value = ''
+        successMsg.value = ''
 
         const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
         const url = `${host}/friend-request/${requestId}?accept=${String(acceptStatus)}`
@@ -308,6 +323,7 @@ export const useStore = defineStore('store', () => {
     async function getReq() {
 
         errorState.value = ''
+        successMsg.value = ''
 
         const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
         const url = `${host}/friend-requests`
@@ -341,6 +357,7 @@ export const useStore = defineStore('store', () => {
     async function removeFriend(userId) {
 
         errorState.value = ''
+        successMsg.value = ''
 
         const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
         const url = `${host}/friend/${userId}`
@@ -370,5 +387,222 @@ export const useStore = defineStore('store', () => {
         { immediate: true }
     )
 
-    return { currUser, capitalUser, targetUser, friends, inReqs, outReqs, errorState, isAuth, profileData, showProfile, getProfile, signIn, createAcc, signOut, findUser, getFriends, sendReq, handleReq, getReq, removeFriend }
+    async function createChat(chatInfo) {
+        errorState.value = ''
+        successMsg.value = ''
+        
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+        const url = host + '/chat'
+
+        const options = {
+            method: 'POST',
+            headers: getAuth(),
+            body: JSON.stringify(chatInfo),
+        }
+        
+        try {
+            const response = await fetch(url, options)
+            console.log(`Response status: ${response.status}`)
+
+            if (!response.ok) {
+                const responseText = await response.text();
+                let result = {};
+
+                if (responseText) {
+                    try {
+                        result = JSON.parse(responseText)
+                    } catch (e) {
+                        console.error("Error parsing JSON:", e)
+                        result = { errors: { parse: { message: "Unexpected server response format" } } }
+                    }
+                }
+
+                console.log(result)
+
+                if (response.status === 400) {
+                    let errMessage = 'Validation Error'
+                    if (result.errors) {
+                        errMessage += ' ' + Object.values(result.errors).map(err => err.message).join(' ')
+                    }
+                    errorState.value = errMessage
+                    console.log(errMessage)
+                } else {
+                    errorState.value = 'Server Error'
+                }
+                return false
+            }
+
+        alert("Group Chat Created Successfully!")
+        await getChats()
+        return true
+
+        } catch (error) {
+        console.log(error)
+        return false
+        }
+    }
+
+    async function getChats() {
+
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+    
+        try {
+            const userResponse = await fetch(`${host}/user`, {
+                method: 'GET',
+                headers: getAuth()
+            })
+
+            if (!userResponse.ok) throw new Error("Could not fetch user info")
+        
+            const userData = await userResponse.json()
+            const chatIds = userData.chat_sessions || []
+            chatInvites.value = (userData.requests || []).filter(req => req.kind === "ChatInvite") 
+
+            const chatDetails = await Promise.all(chatIds.map(id => fetch(`${host}/chat/${id}`, { 
+                headers: getAuth() 
+            }).then(res => res.ok ? res.json() : null)))
+
+            const results = chatDetails.filter(chat => chat !== null)
+
+            for (let chat of results) {
+                chat.memberDisplayNames = chat.users ? chat.users.map(u => u.username) : []
+
+                if (chat.messages) {
+                    chat.messages = chat.messages.map(msg => {
+                        const user = chat.users.find(u => u._id === msg.sender)
+                        return {...msg, sender_name: user ? user.username : 'Unknown'}
+                    })
+                }
+            }
+
+            userChats.value = results
+            console.log(userChats.value)
+            console.log(userData)
+
+        } catch (error) {
+            console.error("Error building chat list:", error)
+        }
+    }
+
+async function selectChat(chat) {
+
+    currChat.value = chat
+    errorState.value = ''
+    successMsg.value = ''
+    
+    const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+    try {
+        const response = await fetch(`${host}/chat/${chat._id}/messages`, {
+            method: 'GET',
+            headers: getAuth()
+        })
+        
+        if (response.ok) {
+            currMsgs.value = await response.json()
+        }
+
+    } catch (error) {
+        console.error("Failed to load messages:", error)
+    }
+}
+
+async function sendInvite(chatId, userId) {
+
+    errorState.value = ''
+    successMsg.value = ''
+
+    const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+    try {
+        const response = await fetch(`${host}/chat/${chatId}/invitation/${userId}`, {
+            method: 'POST',
+            headers: getAuth()
+        })
+
+        if (response.ok) {
+            alert("Invitation sent!")
+        } else {
+            alert("Could not send invitation")
+        }
+    } catch (err) {
+        console.error("Invite Error:", err)
+    }
+}
+
+async function handleInvite(chatId, requestId, isAccepted) {
+
+    errorState.value = ''
+    successMsg.value = ''
+
+    const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+    const url = `${host}/chat/${chatId}/invitation/${requestId}?accept=${isAccepted}`
+
+    try {
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: getAuth()
+        })
+
+        if (response.ok) {
+            await getChats()
+            const updatedChat = await response.json()
+            return updatedChat
+        }
+    } catch (err) {
+        console.error("Response Error:", err);
+    }
+}
+
+async function sendMsg(text) {
+
+    errorState.value = ''
+    successMsg.value = ''
+
+    if (!currChat.value) return
+
+    const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+    
+    try {
+        const response = await fetch(`${host}/chat/${currChat.value._id}/message`, {
+            method: 'POST',
+            headers: getAuth(),
+            body: JSON.stringify({ message: text })
+        })
+
+        if (response.ok) {
+            await selectChat(currChat.value)
+        }
+    } catch (error) {
+        errorState.value = "Failed to send message"
+    }
+}
+
+    async function leaveChat(chatId) {
+
+        errorState.value = ''
+        successMsg.value = ''
+
+        const host = 'https://stingray-app-u3bsh.ondigitalocean.app'
+        try {
+            const response = await fetch(`${host}/chat/${chatId}/membership`, {
+                method: 'DELETE',
+                headers: getAuth()
+            })
+
+            if (response.ok) {
+                userChats.value = userChats.value.filter(c => c._id !== chatId)
+                currChat.value = null
+            } else {
+                const err = await response.json();
+                errorState.value = err.message || "Failed to leave chat"
+            }
+        } catch (error) {
+            console.error("LEAVE ERROR:", error)
+            errorState.value = "Network error"
+        }
+    }
+
+    return { currUser, capitalUser, targetUser, friends, inReqs, outReqs, errorState, successMsg, isAuth, 
+        profileData, showProfile, userChats, currChat, currMsgs, chatInvites,
+        getProfile, signIn, createAcc, signOut, findUser, getFriends, sendReq, handleReq, getReq, removeFriend, 
+        createChat, getChats, selectChat, sendInvite, handleInvite, sendMsg, leaveChat }
 })
