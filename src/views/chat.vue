@@ -235,7 +235,7 @@ button:active {
     flex-direction: column;
     gap: 15px;
     padding: 20px;
-    height: 230px;
+    height: 30vh;
     width: 60vw;
     overflow-y: auto;
     background-color: #f9f9f9;

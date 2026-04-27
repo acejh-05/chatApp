@@ -10,11 +10,12 @@ const newFriend = ref('');
 onMounted(() => {
     store.getReq()
     store.getFriends()
+    store.getChats()
     setInterval(() => {
         store.getReq()
         store.getFriends()
+        store.getChats()
     }, 30000)
-    store.getChats()
 })
 
 const selectFriend = (name) => {
@@ -240,8 +241,11 @@ li {
 }
 
 #name {
-    background: none;
-    border: none;
+    background: rgba(255, 255, 255, 0.683);
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: solid 2px black;
+    
 }
 
 .remove {
